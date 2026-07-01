@@ -1,0 +1,207 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider          = "postgresql"
+  url               = env("DATABASE_URL")
+  directUrl         = env("DIRECT_URL")
+}
+
+// ─────────────────────────────────────────
+// USER
+// ─────────────────────────────────────────
+model User {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  passwordHash  String
+  name          String
+  age           Int?
+  gender        String?
+  heightCm      Float?
+  avatarUrl     String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // relations
+  profile       UserProfile?
+  workouts      Workout[]
+  meals         Meal[]
+  bodyLogs      BodyLog[]
+  habits        Habit[]
+  waterLogs     WaterLog[]
+  refreshTokens RefreshToken[]
+
+  @@map("users")
+}
+
+// ─────────────────────────────────────────
+// USER PROFILE (fitness goals & settings)
+// ─────────────────────────────────────────
+model UserProfile {
+  id              String  @id @default(uuid())
+  userId          String  @unique
+  goal            String? // "fat_loss" | "muscle_gain" | "maintenance"
+  activityLevel   String? // "sedentary" | "light" | "moderate" | "very_active"
+  targetWeightKg  Float?
+  cuttingCals     Int?
+  bulkingCals     Int?
+  maintenanceCals Int?
+  dietaryPref     String? // "standard" | "vegetarian" | "vegan" | "keto"
+  allergies       String? // comma-separated
+  equipment       String? // "full_gym" | "home" | "none"
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_profiles")
+}
+
+// ─────────────────────────────────────────
+// AUTH — REFRESH TOKENS
+// ─────────────────────────────────────────
+model RefreshToken {
+  id        String   @id @default(uuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("refresh_tokens")
+}
+
+// ─────────────────────────────────────────
+// BODY LOGS (weight + measurements)
+// ─────────────────────────────────────────
+model BodyLog {
+  id           String   @id @default(uuid())
+  userId       String
+  loggedAt     DateTime @default(now())
+  weightKg     Float?
+  bodyFatPct   Float?
+  chestCm      Float?
+  waistCm      Float?
+  hipsCm       Float?
+  armCm        Float?
+  thighCm      Float?
+  note         String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("body_logs")
+}
+
+// ─────────────────────────────────────────
+// WORKOUTS
+// ─────────────────────────────────────────
+model Workout {
+  id          String     @id @default(uuid())
+  userId      String
+  name        String                    // e.g. "Chest Day"
+  scheduledAt DateTime?
+  completedAt DateTime?
+  durationMin Int?
+  notes       String?
+  createdAt   DateTime   @default(now())
+
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  exercises WorkoutExercise[]
+
+  @@map("workouts")
+}
+
+model WorkoutExercise {
+  id         String  @id @default(uuid())
+  workoutId  String
+  name       String
+  muscleGroup String
+  sets       Int
+  reps       String  // "8-10" or "12"
+  weightKg   Float?
+  durationMin Int?
+  caloriesBurned Int?
+  notes      String?
+  order      Int     @default(0)
+
+  workout Workout @relation(fields: [workoutId], references: [id], onDelete: Cascade)
+
+  @@map("workout_exercises")
+}
+
+// ─────────────────────────────────────────
+// NUTRITION — MEALS & FOOD ITEMS
+// ─────────────────────────────────────────
+model Meal {
+  id        String     @id @default(uuid())
+  userId    String
+  type      String     // "breakfast" | "lunch" | "dinner" | "snack"
+  loggedAt  DateTime   @default(now())
+  note      String?
+
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  foodItems FoodItem[]
+
+  @@map("meals")
+}
+
+model FoodItem {
+  id          String  @id @default(uuid())
+  mealId      String
+  name        String
+  servingG    Float
+  calories    Int
+  proteinG    Float
+  carbsG      Float
+  fatsG       Float
+  fiberG      Float?
+  sugarG      Float?
+  sodiumMg    Float?
+
+  meal Meal @relation(fields: [mealId], references: [id], onDelete: Cascade)
+
+  @@map("food_items")
+}
+
+// ─────────────────────────────────────────
+// HABITS
+// ─────────────────────────────────────────
+model Habit {
+  id        String  @id @default(uuid())
+  userId    String
+  label     String
+  icon      String?
+  streak    Int     @default(0)
+  createdAt DateTime @default(now())
+
+  user  User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  logs  HabitLog[]
+
+  @@map("habits")
+}
+
+model HabitLog {
+  id       String   @id @default(uuid())
+  habitId  String
+  doneAt   DateTime @default(now())
+
+  habit Habit @relation(fields: [habitId], references: [id], onDelete: Cascade)
+
+  @@map("habit_logs")
+}
+
+// ─────────────────────────────────────────
+// WATER INTAKE
+// ─────────────────────────────────────────
+model WaterLog {
+  id        String   @id @default(uuid())
+  userId    String
+  glasses   Int      @default(1)
+  loggedAt  DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("water_logs")
+}
