@@ -137,12 +137,12 @@ const refresh = async (req, res) => {
     const newRefreshToken = authService.generateRefreshToken(payload.userId);
     await authService.saveRefreshToken(payload.userId, newRefreshToken);
 
-    res.cookie("refreshToken", newRefreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
+    res.cookie("refreshToken", refreshToken, {
+  httpOnly: true,
+  secure: true,                   
+  sameSite: "none",                
+  maxAge: 7 * 24 * 60 * 60 * 1000,
+});
 
     return res.status(200).json({
       success: true,
